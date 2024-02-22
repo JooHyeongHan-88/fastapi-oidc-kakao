@@ -1,10 +1,8 @@
-import json
-
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.config import CLIENT_ID, REDIRECT_URI
-from api.controller import OIDC, decode64
+from api.config import CLIENT_ID, REDIRECT_URI, AUTH_SERVER
+from api.controller import OIDC
 from api.model import UserData
 from api.schema import AuthCode
 
@@ -21,36 +19,54 @@ app.add_middleware(
 )
 
 
+oidc = OIDC()
+
+
 @app.post("/auth")
-async def post_userinfo(data: AuthCode):
+async def return_userinfo(data: AuthCode):
     """
     1. auth code 획득
-    2. auth code 이용한 인증 및 id_token 발급
-    3. id_token 파싱 및 userinfo 획득
+    2. auth code 이용한 클라이언트 인증 및 id_token 발급
+    3. id_token 디코딩 및 userinfo 획득
     4. userinfo DB upsert 및 return
     """
     code = data.code
 
-    oidc = OIDC()
-    token_info = oidc.auth(code)
-    id_token = token_info['id_token']
+    if oidc.auth(code):
+        userinfo = oidc.userinfo
 
-    _, payload, _ = id_token.split(".")
-    userinfo = decode64(payload)
-    userinfo = json.loads(userinfo)
+        user = UserData(userinfo)
+        # TODO: 유저 DB 등록
 
-    user = UserData(userinfo)
-    # TODO: 유저 DB 등록
-
-    return userinfo
+        return userinfo
 
 
-@app.get("/auth/url")
+@app.get("/auth/redirect")
 async def auth_url_api():
     """
     Kakao Auth URL로 리다이렉션
     """
     return Response(
         status_code=307,
-        headers={"Location": f"https://kauth.kakao.com/oauth/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code" }
+        headers={"Location": f"{AUTH_SERVER}/oauth/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code"}
+    )
+
+
+@app.get("/logout/token")
+async def token_expire():
+    """
+    Kakao Auth Token 만료
+    """
+    if oidc.expire_token():
+        return True
+    
+
+@app.get("/logout/account")
+async def logout_account():
+    """
+    Kakao 계정 로그아웃
+    """
+    return Response(
+        status_code=307,
+        headers={"Location": f"{AUTH_SERVER}/oauth/logout?client_id={CLIENT_ID}&logout_redirect_uri={REDIRECT_URI}"}
     )
