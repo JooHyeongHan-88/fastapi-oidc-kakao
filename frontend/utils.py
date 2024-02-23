@@ -30,8 +30,10 @@ def delete_cookie(name) -> None:
 
 
 def _delete_auth_cookies() -> None:
-    delete_cookie("is_login")
-    delete_cookie("acces_token")
+    """
+    인증 정보 관련 저장한 쿠키 모두 삭제
+    """
+    delete_cookie("access_token")
     delete_cookie("userid")
     delete_cookie("nickname")
     delete_cookie("picture")
@@ -39,10 +41,10 @@ def _delete_auth_cookies() -> None:
 
 def get_auth_url() -> Optional[str]:
     """
-    API 서버로부터 redirection URL 반환:
-      API 서버에서 RedirectResponse를 주어서 일반적으로는
-      URL 반환 필요 없이 redirection 되지만 프론트엔드가 파이썬이라
-      브라우저에서 URL 받아서 직접 redirection 필요
+    API 서버로부터 redirection URL 반환
+    : API 서버에서 RedirectResponse를 주어서 일반적으로는
+    : URL 반환 필요 없이 redirection 되지만 프론트엔드가 파이썬이라
+    : 브라우저에서 URL 받아서 직접 redirection 필요
     """
     response = requests.get(f"{API_URL}/auth/redirect", allow_redirects=False)
     if response.status_code == 307:
@@ -94,6 +96,8 @@ def logout_expire(access_token: str) -> Optional[bool]:
     """
     로그아웃 (토큰 만료)
     """
+    access_token = get_cookie("access_token")
+
     _delete_auth_cookies()
 
     headers = {

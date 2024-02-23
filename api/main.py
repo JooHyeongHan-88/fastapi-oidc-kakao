@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import CLIENT_ID, REDIRECT_URI, AUTH_SERVER
 from api.controller import OIDC, expire_token
-from api.model import UserData
 from api.schema import AuthCode
 
 
@@ -26,9 +25,7 @@ async def return_userinfo(data: AuthCode):
     2. 사용자 정보 DB upsert
     3. userinfo DB upsert 및 return
     """
-    code = data.code
-
-    oidc = OIDC(code)
+    oidc = OIDC(data.code)
 
     if oidc.get_auth() and oidc.set_userinfo():
         headers = {
@@ -41,8 +38,7 @@ async def return_userinfo(data: AuthCode):
             "picture": oidc.picture
         }
 
-        # user = UserData(userinfo)
-        # TODO: 유저 DB 등록
+        # 필요에 따라 유저 DB 등록
 
         return JSONResponse(content=contents, headers=headers)
 

@@ -10,7 +10,7 @@ from config import BASE_URL
 
 
 # 초기화
-is_login = get_cookie("is_login")
+userid = get_cookie("userid")
 code = st.query_params.get('code')
 
 # UI 시작
@@ -18,7 +18,7 @@ st.title("FastAPI Kakao OIDC App")
 st.subheader("FastAPI를 이용한 카카오 OIDC 인증 예제입니다.")
 st.divider()
 
-if not is_login:
+if not userid:
     if not code:
         # 로그인 페이지 (쿠키 정보 X / auth 코드 X)
         if st.button("카카오 로그인"):
@@ -29,7 +29,6 @@ if not is_login:
         # Redirect 및 사용자 정보 획득 (쿠키 정보 X / auth 코드 O)
         userinfo = get_userinfo(code)
         if userinfo:
-            set_cookie("is_login", "true")
             set_cookie("access_token", userinfo["access_token"])
             set_cookie("userid", userinfo["userid"])
             set_cookie("nickname", userinfo["nickname"])
@@ -56,8 +55,7 @@ else:
         redirect(BASE_URL)
 
     if c2.button("로그아웃 (토큰 만료)"):
-        access_token = get_cookie("access_token")
-        logout_expire(access_token)
+        logout_expire()
         redirect(BASE_URL)
 
     if c3.button("로그아웃 (카카오 계정)"):
