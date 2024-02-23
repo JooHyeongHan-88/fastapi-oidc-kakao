@@ -3,7 +3,10 @@ import base64
 import json
 from typing import Optional
 
-from api.config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, AUTH_SERVER, API_SERVER
+from api.config import (
+    CLIENT_ID, CLIENT_SECRET, REDIRECT_URI,
+    AUTH_SERVER, API_SERVER
+)
 
 
 def _decode64(string: str) -> Optional[None]:
@@ -20,58 +23,71 @@ def _decode64(string: str) -> Optional[None]:
     
 
 class OIDC:
-    def __init__(self):
-        self.default_header = {
+    def __init__(self, code: str):
+        self.code = code
+
+        self.access_token = None
+        self.refresh_token = None
+        self.id_token = None
+
+        self.userid = None
+        self.nickname = None
+        self.picture = None
+
+    def get_auth(self) -> Optional[bool]:
+        """
+        auth code 인증 및 토큰 획득
+        """
+        url = AUTH_SERVER + "/oauth/token"
+        headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Cache-Control": "no-cache",
         }
-        self.access_token = None
-        self.refresh_token = None
-        self.userinfo = None
+        data = {
+            "grant_type": "authorization_code",
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "redirect_uri": REDIRECT_URI,
+            "code": self.code,
+        } 
 
-    def auth(self, code: str) -> Optional[bool]:
-        response = requests.post(
-            url=AUTH_SERVER + "/oauth/token", 
-            headers=self.default_header,
-            data={
-                "grant_type": "authorization_code",
-                "client_id": CLIENT_ID,
-                "client_secret": CLIENT_SECRET,
-                "redirect_uri": REDIRECT_URI,
-                "code": code,
-            }, 
-        )
+        response = requests.post(url=url, headers=headers, data=data)
+
         if response.status_code == 200:
             token_info = response.json()
-            
+
             self.access_token = token_info['access_token']
             self.refresh_token = token_info['refresh_token']
+            self.id_token = token_info['id_token']
+
+            return True
     
-            id_token = token_info['id_token']
-            _, payload, _ = id_token.split(".")
-            self.userinfo = json.loads(_decode64(payload))
-
-            return True
+    def set_userinfo(self) -> bool:
+        """
+        JWT(id token) 디코딩 -> userinfo 저장
+        """
+        _, payload, _ = self.id_token.split(".")
+        userinfo = json.loads(_decode64(payload))
         
-    def expire_token(self) -> Optional[bool]:
-        response = requests.post(
-            url=API_SERVER + "/v1/user/logout",
-            headers={
-                **self.default_header,
-                **{"Authorization": "Bearer " + self.access_token}
-            }
-        )
-        if response.status_code == 200:
-            self.access_token = None
-            self.refresh_token = None
-            self.userinfo = None
-            return True
-
-    def logout(self) -> Optional[bool]:
-        response = requests.get(url=f"{self.auth_server}/oauth/logout?client_id=${CLIENT_ID}&logout_redirect_uri=${REDIRECT_URI}")
-        if response.status_code == 200:
-            self.access_token = None
-            self.refresh_token = None
-            self.userinfo = None
-            return True
+        self.userid = userinfo["sub"]
+        self.nickname = userinfo["nickname"]
+        self.picture = userinfo["picture"]
+            
+        return True
         
+
+def expire_token(access_token: str) -> Optional[bool]:
+    """
+    발급한 토큰 만료
+    """
+    url = API_SERVER + "/v1/user/logout"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Cache-Control": "no-cache",
+        "Authorization": "Bearer " + access_token,
+    }
+
+    response = requests.post(url=url, headers=headers)
+    
+    if response.status_code == 200:
+        return True

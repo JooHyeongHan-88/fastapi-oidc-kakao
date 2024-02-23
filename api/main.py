@@ -1,14 +1,14 @@
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Header
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import CLIENT_ID, REDIRECT_URI, AUTH_SERVER
-from api.controller import OIDC
+from api.controller import OIDC, expire_token
 from api.model import UserData
 from api.schema import AuthCode
 
 
 app = FastAPI()
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,26 +19,32 @@ app.add_middleware(
 )
 
 
-oidc = OIDC()
-
-
 @app.post("/auth")
 async def return_userinfo(data: AuthCode):
     """
-    1. auth code 획득
-    2. auth code 이용한 클라이언트 인증 및 id_token 발급
-    3. id_token 디코딩 및 userinfo 획득
-    4. userinfo DB upsert 및 return
+    1. auth code 이용한 토큰 및 사용자 정보 획득
+    2. 사용자 정보 DB upsert
+    3. userinfo DB upsert 및 return
     """
     code = data.code
 
-    if oidc.auth(code):
-        userinfo = oidc.userinfo
+    oidc = OIDC(code)
 
-        user = UserData(userinfo)
+    if oidc.get_auth() and oidc.set_userinfo():
+        headers = {
+            "Cache-Control": "no-cache",
+            "Access-Token": oidc.access_token
+        }
+        contents = {
+            "userid": oidc.userid,
+            "nickname": oidc.nickname,
+            "picture": oidc.picture
+        }
+
+        # user = UserData(userinfo)
         # TODO: 유저 DB 등록
 
-        return userinfo
+        return JSONResponse(content=contents, headers=headers)
 
 
 @app.get("/auth/redirect")
@@ -53,16 +59,16 @@ async def auth_url_api():
 
 
 @app.get("/logout/token")
-async def token_expire():
+async def token_expire(access_token: str = Header(None)):
     """
     Kakao Auth Token 만료
     """
-    if oidc.expire_token():
+    if expire_token(access_token):
         return True
     
 
 @app.get("/logout/account")
-async def logout_account():
+async def logout():
     """
     Kakao 계정 로그아웃
     """
