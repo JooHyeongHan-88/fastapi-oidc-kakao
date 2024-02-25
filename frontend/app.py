@@ -2,8 +2,8 @@ import streamlit as st
 
 from utils import (
     get_auth_url, redirect, get_userinfo,
-    set_cookie, get_cookie,
-    logout_cookie, logout_expire, logout_account
+    logout_cookie, logout_expire, logout_account,
+    get_cookie
 )
 
 from config import BASE_URL
@@ -27,12 +27,7 @@ if not userid:
                 redirect(auth_url)
     else:
         # Redirect 및 사용자 정보 획득 (쿠키 정보 X / auth 코드 O)
-        userinfo = get_userinfo(code)
-        if userinfo:
-            set_cookie("access_token", userinfo["access_token"])
-            set_cookie("userid", userinfo["userid"])
-            set_cookie("nickname", userinfo["nickname"])
-            set_cookie("picture", userinfo["picture"])
+        get_userinfo(code)
         redirect(BASE_URL)
 
 else:

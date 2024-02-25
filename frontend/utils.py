@@ -7,11 +7,19 @@ from streamlitextras.cookiemanager import get_cookie_manager
 from config import API_URL
 
 
+# JavaScript 활용
+def redirect(url: str) -> None:
+    """
+    redirection 수행 JS 코드 실행 (by. streamlit-extras)
+    """
+    stxs_javascript(f"window.location.replace('{url}');")
+
+
 def set_cookie(name, value) -> None:
     """
     쿠키 저장 JS 코드 실행 (by. streamlit-extras)
     """
-    stxs_javascript(f'document.cookie = "{name}={value}; path=/"')
+    stxs_javascript(f"document.cookie = '{name}={value}; path=/'")
 
 
 def get_cookie(name) -> str:
@@ -29,16 +37,7 @@ def delete_cookie(name) -> None:
     stxs_javascript(f"document.cookie = '{name}=;expires=Thu, 01 Jan 1970 00:00:01 GMT;';")
 
 
-def _delete_auth_cookies() -> None:
-    """
-    인증 정보 관련 저장한 쿠키 모두 삭제
-    """
-    delete_cookie("access_token")
-    delete_cookie("userid")
-    delete_cookie("nickname")
-    delete_cookie("picture")
-
-
+# API 요청
 def get_auth_url() -> Optional[str]:
     """
     API 서버로부터 redirection URL 반환
@@ -54,34 +53,34 @@ def get_auth_url() -> Optional[str]:
         return None
 
 
-def redirect(url: str) -> None:
+def get_userinfo(code: str) -> Optional[bool]:
     """
-    redirection 수행 JS 코드 실행 (by. streamlit-extras)
-    """
-    stxs_javascript(f"window.location.replace('{url}');")
-
-
-def get_userinfo(code: str) -> Optional[dict]:
-    """
-    API 서버에 access token 및 userinfo 반환 요청
+    API 서버에 access token 및 userinfo 요청 후 쿠키에 저장
+    : 
     """
     response = requests.post(url=f"{API_URL}/auth", json={"code": code})
 
     if response.status_code == 200:
         access_token = response.headers["Access-Token"]
+        cookies: dict = response.cookies.get_dict()
 
-        userinfo = response.json()
+        set_cookie("access_token", access_token)
 
-        userid = userinfo["userid"]
-        nickname = userinfo["nickname"]
-        picture = userinfo["picture"]
-        
-        return {
-            "access_token": access_token,
-            "userid": userid,
-            "nickname": nickname,
-            "picture": picture
-        }
+        for key, value in cookies.items():
+            set_cookie(key, value)
+
+        return True
+
+
+# 로그아웃
+def _delete_auth_cookies() -> None:
+    """
+    인증 정보 관련 저장한 쿠키 모두 삭제
+    """
+    delete_cookie("access_token")
+    delete_cookie("userid")
+    delete_cookie("nickname")
+    delete_cookie("picture")
 
 
 def logout_cookie() -> Optional[bool]:

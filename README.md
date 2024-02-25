@@ -1,6 +1,6 @@
 # FastAPI-OIDC-Kakao
 FastAPI를 이용한 Kakao OIDC 로그인 예제.
-> 구현 편의상 API 서버가 `access token` 및 `사용자 정보`를 그대로 반환하며 이를 브라우저(쿠키)에 저장한다.
+> API 서버가 `access token`는 헤더로 `사용자 정보`는 쿠키로 응답하면 이를 브라우저(쿠키)에 저장한다.
 
 
 ## 사전 설정

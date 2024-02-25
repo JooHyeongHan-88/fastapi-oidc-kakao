@@ -2,6 +2,8 @@ from fastapi import FastAPI, Response, Header
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+import urllib.parse
+
 from api.config import CLIENT_ID, REDIRECT_URI, AUTH_SERVER
 from api.controller import OIDC, expire_token
 from api.schema import AuthCode
@@ -23,7 +25,7 @@ async def return_userinfo(data: AuthCode):
     """
     1. auth code 이용한 토큰 및 사용자 정보 획득
     2. 사용자 정보 DB upsert
-    3. userinfo DB upsert 및 return
+    3. Access Token 헤더에, 사용자 정보 쿠키에 담아 응답
     """
     oidc = OIDC(data.code)
 
@@ -32,15 +34,14 @@ async def return_userinfo(data: AuthCode):
             "Cache-Control": "no-cache",
             "Access-Token": oidc.access_token
         }
-        contents = {
-            "userid": oidc.userid,
-            "nickname": oidc.nickname,
-            "picture": oidc.picture
-        }
 
-        # 필요에 따라 유저 DB 등록
+        response = Response(headers=headers)
 
-        return JSONResponse(content=contents, headers=headers)
+        response.set_cookie("userid", urllib.parse.quote(oidc.userid))
+        response.set_cookie("nickname", urllib.parse.quote(oidc.nickname))
+        response.set_cookie("picture", urllib.parse.quote(oidc.picture))
+
+        return response   
 
 
 @app.get("/auth/redirect")
