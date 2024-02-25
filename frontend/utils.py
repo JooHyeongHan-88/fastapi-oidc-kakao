@@ -19,7 +19,7 @@ def set_cookie(name, value) -> None:
     """
     쿠키 저장 JS 코드 실행 (by. streamlit-extras)
     """
-    stxs_javascript(f"document.cookie = '{name}={value}; path=/'")
+    stxs_javascript(f"document.cookie = '{name}={value}; path=/;'")
 
 
 def get_cookie(name) -> str:
@@ -34,7 +34,7 @@ def delete_cookie(name) -> None:
     """
     쿠키 삭제 JS 코드 실행 (by. streamlit-extras)
     """
-    stxs_javascript(f"document.cookie = '{name}=;expires=Thu, 01 Jan 1970 00:00:01 GMT;';")
+    stxs_javascript(f"document.cookie = '{name}=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';")
 
 
 # API 요청
@@ -90,19 +90,16 @@ def logout_cookie() -> Optional[bool]:
     _delete_auth_cookies()
     return True
 
-
-def logout_expire(access_token: str) -> Optional[bool]:
+def logout_expire() -> Optional[bool]:
     """
     로그아웃 (토큰 만료)
     """
-    access_token = get_cookie("access_token")
-
-    _delete_auth_cookies()
-
     headers = {
         "Cache-Control": "no-cache",
-        "Access-Token": access_token
+        "Access-Token": get_cookie("access_token")
     }
+
+    _delete_auth_cookies()
 
     response = requests.get(url=f"{API_URL}/logout/token", headers=headers)
 

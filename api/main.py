@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Response, Header
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 import urllib.parse
