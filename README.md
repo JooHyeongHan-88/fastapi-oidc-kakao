@@ -18,7 +18,7 @@ FastAPI를 이용한 Kakao OIDC 로그인 예제.
 ### 2. 환경 설정
 
 #### 환경 변수
-API 서버 코드 내 `config.py` 파일 생성하여 카카오로부터 발급받은 `REST API Key`, `Client Secret`, `Redirect URI`를 다음과 같이 입력.
+API 서버 코드 내 `config.py` 파일 생성하여 카카오 `서비스 URL` 및 카카오로부터 발급받은 `REST API Key`, `Client Secret`, `Redirect URI`를 다음과 같이 입력.
 
 > **`config.py` 위치는 `./api/main.py`와 같은 위치에 생성한다.**
 
